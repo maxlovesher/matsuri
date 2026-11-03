@@ -1,0 +1,9 @@
+# Assignment brief, not part of the site
+*.docx
+
+# OS and tool leftovers
+.DS_Store
+Thumbs.db
+desktop.ini
+*.stackdump
+node_modules/
