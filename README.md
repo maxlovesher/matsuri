@@ -4,8 +4,8 @@ A responsive event management website for festivals and events across Japan, bui
 
 The whole site is designed like a Japanese print on washi paper. Behind it runs a real-time 3D scene of hand-embroidered temari balls and glowing paper lanterns. As you scroll, they float in front of a red sun, tumble and bounce off the floor, assemble into a torii gate, and then rush past as you walk through it to reach the event calendar.
 
-- **Live demo:** _add your deployed link here_
-- **Repository:** _add your GitHub link here_
+- **Live demo:** <https://maxlovesher.github.io/matsuri/>
+- **Repository:** <https://github.com/maxlovesher/matsuri>
 
 ## Features
 
