@@ -1,16 +1,16 @@
 <!doctype html>
-<html lang="en" data-theme="light" data-palette="royal">
+<html lang="en" data-theme="light" data-season="autumn">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gravity — Events worth showing up for</title>
-  <meta name="description" content="Browse upcoming music, tech, art, food and sport events, see the details, and register for a seat in under a minute.">
-  <meta name="theme-color" content="#ecefff">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g' cx='.36' cy='.3' r='.8'%3E%3Cstop stop-color='%235175ff'/%3E%3Cstop offset='.55' stop-color='%230e2ac5'/%3E%3Cstop offset='1' stop-color='%23020b40'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='15' fill='url(%23g)'/%3E%3C/svg%3E">
+  <title>Matsuri — Festivals and events across Japan</title>
+  <meta name="description" content="Browse festivals, concerts, craft days and night markets across Japan, see the details, and save your seat in under a minute.">
+  <meta name="theme-color" content="#f3eee3">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23c23a22'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23f3eee3' font-family='serif'%3E%E7%A5%AD%3C/text%3E%3C/svg%3E">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&family=Raleway:wght@400;500;600;700;900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 
   <!-- Applied before first paint so a saved theme never flashes the wrong colours. -->
   <script>
@@ -19,9 +19,11 @@
       var read = function (key) {
         try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
       };
+      var month = new Date().getMonth();
+      var currentSeason = month === 11 || month < 2 ? 'winter' : month < 5 ? 'spring' : month < 8 ? 'summer' : 'autumn';
       var prefersDark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
-      root.dataset.theme = read('gravity.theme') || (prefersDark ? 'dark' : 'light');
-      root.dataset.palette = read('gravity.palette') || 'royal';
+      root.dataset.theme = read('matsuri.theme') || (prefersDark ? 'dark' : 'light');
+      root.dataset.season = read('matsuri.season') || currentSeason;
     })();
   </script>
 
@@ -31,40 +33,46 @@
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
     <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></symbol>
-    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
     <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
     <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
-    <symbol id="i-arrow-up-right" viewBox="0 0 24 24"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
     <symbol id="i-pointer" viewBox="0 0 24 24"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
-    <symbol id="i-calendar" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
-    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
     <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
-    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></symbol>
     <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
     <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-yen" viewBox="0 0 24 24"><path d="m6 3 6 9 6-9M12 12v9M7 13h10M7 17h10"/></symbol>
   </svg>
 
   <a class="skip-link" href="#events">Skip to all events</a>
 
-  <div class="backdrop" id="backdrop" data-stage="0" aria-hidden="true"></div>
+  <div class="backdrop" id="backdrop" data-stage="0" aria-hidden="true"><span class="sun"></span></div>
   <div class="field" id="field" aria-hidden="true"><canvas id="fieldCanvas"></canvas></div>
 
-  <!-- Pre-roll loader -->
+  <!-- Pre-roll: an ensō brush circle that closes as the scene warms up -->
   <div class="loader" id="loader" role="status" aria-live="polite">
-    <div class="loader__item loader__status" id="loaderStatus">Calibrating gravity field</div>
-    <div class="loader__item loader__track"><div class="loader__fill" id="loaderFill"></div></div>
-    <div class="loader__item loader__count" id="loaderCount">000%</div>
+    <div class="loader__enso">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="loader__ring" cx="60" cy="60" r="52" pathLength="100"/>
+        <circle class="loader__stroke" id="loaderStroke" cx="60" cy="60" r="52" pathLength="100"/>
+      </svg>
+      <span class="loader__kanji" lang="ja" aria-hidden="true">祭</span>
+    </div>
+    <div class="loader__status" id="loaderStatus">Lighting the lanterns</div>
+    <div class="loader__count" id="loaderCount">000%</div>
   </div>
 
   <header class="site-header" id="siteHeader">
-    <a class="wordmark" href="#top">GRAVITY</a>
+    <a class="brand" href="#top" aria-label="Matsuri, back to top">
+      <span class="seal" lang="ja" aria-hidden="true">祭</span>
+      <span class="brand__name">MATSURI</span>
+    </a>
     <nav class="site-nav" aria-label="Primary">
       <a href="#featured">Featured</a>
       <a href="#categories">Categories</a>
@@ -73,97 +81,90 @@
       <a href="#contact">Contact</a>
     </nav>
     <div class="site-header__actions">
-      <button class="glass-btn" type="button" data-theme-toggle aria-label="Switch colour theme">
+      <button class="square-btn" type="button" data-theme-toggle aria-label="Switch colour theme">
         <svg class="icon icon--sun"><use href="#i-sun"/></svg>
         <svg class="icon icon--moon"><use href="#i-moon"/></svg>
       </button>
-      <button class="glass-btn" type="button" data-open-controls aria-label="Open studio controls">
+      <button class="square-btn" type="button" data-open-controls aria-label="Choose a season">
         <svg class="icon"><use href="#i-sliders"/></svg>
       </button>
-      <a class="pill-link" href="#register">
-        <span>Register</span>
-        <span class="orb orb--sm"><svg class="icon"><use href="#i-chevron"/></svg></span>
-      </a>
-      <button class="glass-btn glass-btn--menu" type="button" id="openMenu" aria-label="Open menu">
+      <a class="btn btn--primary btn--header" href="#register">Register</a>
+      <button class="square-btn square-btn--menu" type="button" id="openMenu" aria-label="Open menu">
         <svg class="icon"><use href="#i-menu"/></svg>
       </button>
     </div>
   </header>
 
   <main id="top">
-    <!-- 01 — Hero: the field floats -->
+    <!-- 一 Hero: the field floats -->
     <section class="section hero" id="hero">
+      <p class="tate hero__tate enter" lang="ja" aria-hidden="true" style="--y:14px;--d:.5s">祭りへ、ようこそ</p>
       <div class="hero__row">
         <div class="hero__main">
-          <p class="hero__eyebrow enter" style="--y:14px;--d:.15s">[ Live events platform ]</p>
-          <h1 class="hero__title enter" style="--y:22px;--d:.28s"><span>Less noise.</span> <span>More gravity.</span></h1>
-          <a class="cta enter" href="#events" style="--y:18px;--d:.4s">
-            <span>Explore events</span>
-            <span class="orb orb--sm"><svg class="icon"><use href="#i-arrow-down"/></svg></span>
+          <p class="hero__eyebrow enter" style="--y:14px;--d:.15s">Festivals &amp; events across Japan</p>
+          <h1 class="hero__title enter" style="--y:22px;--d:.28s"><span>Follow the</span> <span>lanterns.</span></h1>
+          <a class="btn btn--primary btn--large enter" href="#events" style="--y:18px;--d:.4s">
+            Explore events <svg class="icon"><use href="#i-arrow-down"/></svg>
           </a>
         </div>
         <div class="hero__side enter" style="--y:18px;--d:.45s">
-          <p class="hero__lede">We pull the events worth showing up for into one place, so you spend less time searching and more time there.</p>
+          <p class="hero__lede">Festivals, concerts, craft days and night markets, gathered in one calendar. Pick one, save your seat, and go.</p>
           <a class="next-up" id="nextUp" href="#events">
             <span class="next-up__label">Next up</span>
             <span class="next-up__name" id="nextUpName">Browse events</span>
             <span class="next-up__count" id="nextUpCount" aria-hidden="true"></span>
           </a>
-          <div class="scroll-cue">
-            <svg class="icon"><use href="#i-arrow-down"/></svg>
-            <span>Scroll</span>
-          </div>
         </div>
       </div>
     </section>
 
-    <!-- 02 — Featured: the field falls -->
+    <!-- 二 Featured: the temari fall -->
     <section class="section featured" id="featured" tabindex="-1">
       <div class="featured__grid">
         <div class="featured__intro">
-          <p class="label reveal">[ 02 — Featured ]</p>
+          <p class="label reveal"><span lang="ja" aria-hidden="true">特集</span> Featured</p>
           <h2 class="display reveal" style="--d:.1s">Worth<br>falling for.</h2>
-          <p class="body-copy reveal" style="--d:.2s">Keep scrolling and the field gives in to gravity. These three are the events our calendar keeps falling back on: the ones people book first and talk about for weeks.</p>
+          <p class="body-copy reveal" style="--d:.2s">Keep scrolling and the temari tumble, each one a thread ball wound by hand. These three are the gatherings our calendar keeps falling back on: the ones people book first and talk about for weeks.</p>
           <a class="text-link reveal" style="--d:.28s" href="#events">
-            See every event <svg class="icon"><use href="#i-arrow-up-right"/></svg>
+            See every event <svg class="icon"><use href="#i-arrow-right"/></svg>
           </a>
         </div>
         <div class="featured__list reveal" id="featuredList" style="--d:.25s"></div>
       </div>
     </section>
 
-    <!-- 03 — Categories: the field becomes a heart -->
-    <section class="section form-section" id="categories" tabindex="-1">
-      <div class="form-section__top">
-        <p class="label reveal">[ 03 — Categories ]</p>
-        <h2 class="display reveal" style="--d:.1s">Find what<br>you love.</h2>
+    <!-- 三 Categories: the field becomes a torii gate -->
+    <section class="section gate" id="categories" tabindex="-1">
+      <div class="gate__top">
+        <p class="label reveal"><span lang="ja" aria-hidden="true">鳥居</span> Categories</p>
+        <h2 class="display reveal" style="--d:.1s">Choose<br>your gate.</h2>
       </div>
-      <div class="form-section__bottom">
-        <div class="form-section__note reveal" style="--d:.15s">
-          <p class="body-copy">Out of all that free-fall, everything finds its place in one shape. Pick the kind of night you're after and we'll narrow the calendar down. Move your cursor through the heart and watch it scatter and recover.</p>
-          <span class="hint-pill">
+      <div class="gate__bottom">
+        <div class="gate__note reveal" style="--d:.15s">
+          <p class="body-copy">Out of all that tumbling, the threads pull together into a torii, the gate you pass on the way to somewhere that matters. Pick the kind of day you're after and we'll narrow the calendar down.</p>
+          <span class="hint">
             <svg class="icon"><use href="#i-pointer"/></svg>
-            Swipe through it
+            Move through the gate to scatter it
           </span>
         </div>
         <ul class="category-links reveal" id="categoryLinks" style="--d:.25s"></ul>
       </div>
     </section>
 
-    <!-- 04 — Release: the field rushes past the camera -->
+    <!-- 四 Release: the camera walks through the gate -->
     <section class="section release" id="release">
       <div class="release__inner">
-        <p class="label reveal">[ 04 — Release ]</p>
+        <p class="label reveal"><span lang="ja" aria-hidden="true">通過</span> Passing through</p>
         <h2 class="display display--xl reveal" style="--d:.12s">And then,<br>you're there.</h2>
-        <p class="body-copy reveal" style="--d:.24s">Every plan starts as a maybe. Pick a date, claim your seat, and let the rest of the noise rush past you until the only thing left is the night itself.</p>
+        <p class="body-copy reveal" style="--d:.24s">Every plan starts as a maybe. Pick a date, claim your seat, and walk under the gate while the noise of the week rushes past you.</p>
       </div>
     </section>
 
-    <!-- 05 — Catalogue -->
+    <!-- 五 Catalogue -->
     <section class="section catalogue" id="events" tabindex="-1">
       <div class="catalogue__head">
         <div>
-          <p class="label">[ 05 — All events ]</p>
+          <p class="label"><span lang="ja" aria-hidden="true">行事</span> All events</p>
           <h2 class="display">What's coming up.</h2>
         </div>
         <p class="catalogue__count" id="resultCount" role="status" aria-live="polite"></p>
@@ -187,9 +188,9 @@
       </div>
     </section>
 
-    <!-- 06 — Saved registrations -->
+    <!-- 六 Saved registrations -->
     <section class="section my-regs" id="my-registrations" tabindex="-1">
-      <p class="label">[ 06 — Your seats ]</p>
+      <p class="label"><span lang="ja" aria-hidden="true">予約</span> Your seats</p>
       <h2 class="display">My registrations.</h2>
       <p class="body-copy">Saved in this browser, so they're still here when you come back.</p>
       <div class="ticket-list" id="ticketList"></div>
@@ -197,24 +198,16 @@
   </main>
 
   <footer class="site-footer" id="contact" tabindex="-1">
-    <span class="site-footer__glow site-footer__glow--a" aria-hidden="true"></span>
-    <span class="site-footer__glow site-footer__glow--b" aria-hidden="true"></span>
-
-    <div class="marquee" aria-hidden="true">
-      <div class="marquee__track">
-        <span>Less noise</span><i></i><span>More gravity</span><i></i><span>Show up</span><i></i><span>Save your seat</span><i></i>
-        <span>Less noise</span><i></i><span>More gravity</span><i></i><span>Show up</span><i></i><span>Save your seat</span><i></i>
-      </div>
-    </div>
+    <div class="seigaiha" aria-hidden="true"></div>
+    <span class="site-footer__kanji" lang="ja" aria-hidden="true">祭</span>
 
     <div class="site-footer__body">
       <div class="site-footer__grid">
         <div class="site-footer__cta">
-          <p class="site-footer__eyebrow">[ Host with us ]</p>
-          <h2>Planning something<br>with real weight?</h2>
-          <a class="mail-pill" href="mailto:hello@gravity.studio">
-            <span>hello@gravity.studio</span>
-            <span class="orb"><svg class="icon"><use href="#i-arrow-up-right"/></svg></span>
+          <p class="site-footer__eyebrow">Host with us</p>
+          <h2>Holding a festival<br>of your own?</h2>
+          <a class="btn btn--primary btn--large" href="mailto:hello@matsuri.example">
+            hello@matsuri.example <svg class="icon"><use href="#i-arrow-right"/></svg>
           </a>
         </div>
         <div class="site-footer__cols">
@@ -235,17 +228,16 @@
             <h3>Site</h3>
             <ul>
               <li><a href="#top">Back to top</a></li>
-              <li><button type="button" data-open-controls>Studio controls</button></li>
+              <li><button type="button" data-open-controls>Change season</button></li>
               <li><button type="button" data-theme-toggle>Switch theme</button></li>
-              <li><a href="mailto:hello@gravity.studio">Contact</a></li>
+              <li><a href="mailto:hello@matsuri.example">Contact</a></li>
             </ul>
           </div>
         </div>
       </div>
       <div class="site-footer__bar">
-        <span class="wordmark wordmark--footer">GRAVITY</span>
-        <span class="site-footer__dot" aria-hidden="true"></span>
-        <span class="site-footer__legal">© 2026 Gravity Events. A K Explore web design project.</span>
+        <span class="seal" lang="ja" aria-hidden="true">祭</span>
+        <span class="site-footer__legal">© 2026 Matsuri. A K Explore web design project. All events are fictional.</span>
       </div>
     </div>
   </footer>
@@ -255,33 +247,29 @@
     <div class="sheet__scroll" id="eventSheetBody"></div>
   </dialog>
 
-  <!-- Studio controls -->
+  <!-- Seasons -->
   <dialog class="sheet sheet--controls" id="controlsSheet" aria-labelledby="controlsTitle">
     <div class="sheet__scroll controls">
       <div class="controls__head">
-        <h2 class="controls__title" id="controlsTitle">
-          <svg class="icon"><use href="#i-sliders"/></svg> Studio Controls
-        </h2>
-        <button class="round-btn" type="button" data-sheet-close aria-label="Close studio controls">
+        <h2 class="controls__title" id="controlsTitle">Seasons</h2>
+        <button class="square-btn" type="button" data-sheet-close aria-label="Close seasons">
           <svg class="icon"><use href="#i-x"/></svg>
         </button>
       </div>
-      <p class="controls__note">Set the hero sphere palette. As you scroll, the scene morphs to volt-lime, then rose-pink as the heart assembles.</p>
+      <p class="controls__note">The site opens in the current season. Choose another to re-thread the temari and change what drifts across the page.</p>
 
-      <h3 class="controls__heading"><svg class="icon"><use href="#i-sparkles"/></svg> Appearance</h3>
+      <h3 class="controls__heading">Appearance</h3>
       <div class="theme-switch" role="group" aria-label="Colour theme">
-        <button type="button" data-set-theme="light"><svg class="icon"><use href="#i-sun"/></svg> Light</button>
-        <button type="button" data-set-theme="dark"><svg class="icon"><use href="#i-moon"/></svg> Dark</button>
+        <button type="button" data-set-theme="light"><svg class="icon"><use href="#i-sun"/></svg> Day</button>
+        <button type="button" data-set-theme="dark"><svg class="icon"><use href="#i-moon"/></svg> Night</button>
       </div>
 
-      <h3 class="controls__heading"><svg class="icon"><use href="#i-sparkles"/></svg> Hero Palette</h3>
-      <div class="palette-list" id="paletteList" role="group" aria-label="Hero palette"></div>
+      <h3 class="controls__heading">Season</h3>
+      <div class="season-list" id="seasonList" role="group" aria-label="Season"></div>
 
       <div class="controls__foot">
-        <div class="controls__spec"><span>RENDER ENGINE</span><span>THREE.JS WEBGL</span></div>
-        <div class="controls__spec"><span>DYNAMICS SOLVER</span><span>3D COLLISION VERLET</span></div>
         <button class="btn btn--ghost btn--block" type="button" id="resetControls">
-          <svg class="icon"><use href="#i-rotate"/></svg> Reset Defaults
+          <svg class="icon"><use href="#i-rotate"/></svg> Back to the current season
         </button>
       </div>
     </div>
@@ -291,8 +279,11 @@
   <dialog class="sheet sheet--menu" id="menuSheet" aria-label="Menu">
     <div class="sheet__scroll menu">
       <div class="controls__head">
-        <span class="wordmark">GRAVITY</span>
-        <button class="round-btn" type="button" data-sheet-close aria-label="Close menu">
+        <span class="brand">
+          <span class="seal" lang="ja" aria-hidden="true">祭</span>
+          <span class="brand__name">MATSURI</span>
+        </span>
+        <button class="square-btn" type="button" data-sheet-close aria-label="Close menu">
           <svg class="icon"><use href="#i-x"/></svg>
         </button>
       </div>
@@ -311,6 +302,7 @@
   <script src="js/events.js" defer></script>
   <script src="js/poster.js" defer></script>
   <script src="js/sheets.js" defer></script>
+  <script src="js/patterns.js" defer></script>
   <script src="js/scene.js" defer></script>
   <script src="js/catalogue.js" defer></script>
   <script src="js/registration.js" defer></script>

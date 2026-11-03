@@ -1,15 +1,21 @@
-/* Boots the page: loader, smooth scroll, scroll progress, theme, palette and reveals. */
+/* Boots the page: loader, smooth scroll, scroll progress, theme, seasons and reveals. */
 (() => {
   const root = document.documentElement;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const PALETTES = [
-    { id: 'royal', name: 'Royal Blue & Pearl', description: 'Hyper-distinct cobalt spheres floating in soft white-slate gradients.', swatch: '#2F69FF', ball: '#2F69FF' },
-    { id: 'blush', name: 'Rose Blush & Crème', description: 'Sweet candy pinks and juicy strawberry accents in a pearl studio.', swatch: '#FFA6B3', ball: '#FFC5C2' },
-    { id: 'volt', name: 'Volt Lime & Slate', description: 'Electric neon volt-lime against a clean white-slate horizon.', swatch: '#E1FC03', ball: '#E1FC03' },
-    { id: 'arctic', name: 'Arctic Sky & Crystal', description: 'Cool arctic crystal blues with a translucent glass sheen.', swatch: '#96E5FF', ball: '#96E5FF' },
+  const SEASONS = [
+    { id: 'spring', kanji: '春', name: 'Spring', description: 'Sakura pinks, with petals on the wind.' },
+    { id: 'summer', kanji: '夏', name: 'Summer', description: 'Festival indigo, cool as a yukata.' },
+    { id: 'autumn', kanji: '秋', name: 'Autumn', description: 'Maple reds and burnished gold.' },
+    { id: 'winter', kanji: '冬', name: 'Winter', description: 'Snow, ice and sumi ink.' },
   ];
-  const DEFAULT_PALETTE = PALETTES[0];
+
+  const seasonForToday = () => {
+    const month = new Date().getMonth();
+    if (month === 11 || month < 2) return 'winter';
+    if (month < 5) return 'spring';
+    return month < 8 ? 'summer' : 'autumn';
+  };
 
   const control = { progress: 0, started: false, paused: false };
   const mouse = { x: 99, y: 99, isDown: false };
@@ -106,7 +112,7 @@
   };
 
   const stageFor = (progress) => {
-    if (progress > 3.3) return 3;
+    if (progress > 2.6) return 3;
     if (progress > 1.55) return 2;
     if (progress > 0.7) return 1;
     return 0;
@@ -150,7 +156,7 @@
 
   /* --- Theme --- */
 
-  const THEME_COLORS = { light: '#ecefff', dark: '#04060f' };
+  const THEME_COLORS = { light: '#f3eee3', dark: '#0b1120' };
 
   const applyTheme = (theme) => {
     root.dataset.theme = theme;
@@ -158,10 +164,11 @@
     document.querySelectorAll('[data-set-theme]').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.setTheme === theme));
     });
-    const next = theme === 'dark' ? 'light' : 'dark';
-    document.querySelectorAll('.glass-btn[data-theme-toggle]').forEach((button) => {
+    const next = theme === 'dark' ? 'day' : 'night';
+    document.querySelectorAll('.square-btn[data-theme-toggle]').forEach((button) => {
       button.setAttribute('aria-label', `Switch to ${next} theme`);
     });
+    if (scene) scene.setTheme(theme);
   };
 
   const setTheme = (theme) => {
@@ -169,25 +176,25 @@
     applyTheme(theme);
   };
 
-  /* --- Palette --- */
+  /* --- Seasons --- */
 
-  const paletteList = document.getElementById('paletteList');
+  const seasonList = document.getElementById('seasonList');
 
-  const applyPalette = (id) => {
-    const palette = PALETTES.find((item) => item.id === id) || DEFAULT_PALETTE;
-    root.dataset.palette = palette.id;
-    paletteList.querySelectorAll('[data-palette-id]').forEach((button) => {
-      button.setAttribute('aria-pressed', String(button.dataset.paletteId === palette.id));
+  const applySeason = (id) => {
+    root.dataset.season = id;
+    seasonList.querySelectorAll('[data-season-id]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.seasonId === id));
     });
-    if (scene) scene.setBallColor(palette.ball);
-    return palette;
+    if (scene) scene.setSeason(id);
   };
 
-  const renderPalettes = () => {
-    paletteList.innerHTML = PALETTES.map((palette) => `
-      <button class="palette" type="button" data-palette-id="${palette.id}" aria-pressed="false">
-        <span class="palette__top">${palette.name}<span class="palette__swatch" style="background:${palette.swatch}"></span></span>
-        <span class="palette__desc">${palette.description}</span>
+  const renderSeasons = () => {
+    seasonList.innerHTML = SEASONS.map((season) => `
+      <button class="season" type="button" data-season-id="${season.id}" aria-pressed="false">
+        <span class="season__kanji" lang="ja" aria-hidden="true">${season.kanji}</span>
+        <span class="season__name">${season.name}</span>
+        <span class="season__desc">${season.description}</span>
+        <span class="season__swatches" aria-hidden="true">${FieldScene.SEASONS[season.id].threads.map(([ball]) => `<i style="background:${ball}"></i>`).join('')}</span>
       </button>
     `).join('');
   };
@@ -215,14 +222,15 @@
 
   const runLoader = (isReady, onDone) => {
     const loader = document.getElementById('loader');
-    const fill = document.getElementById('loaderFill');
+    const stroke = document.getElementById('loaderStroke');
     const count = document.getElementById('loaderCount');
     const status = document.getElementById('loaderStatus');
     let value = 0;
     let last = performance.now();
 
     const frame = (now) => {
-      const dt = Math.max(0, Math.min((now - last) / 1000, 0.05));
+      // A generous cap: on a slow device the loader should still finish in about the same time.
+      const dt = Math.max(0, Math.min((now - last) / 1000, 0.15));
       last = now;
       const ready = isReady();
 
@@ -233,9 +241,10 @@
         value += (92 - value) * 1.7 * dt;
       }
 
-      fill.style.width = `${value}%`;
+      // An ensō is never quite closed, so the brush stops just short of its start.
+      stroke.style.strokeDashoffset = String(100 - value * 0.94);
       count.textContent = `${String(Math.floor(value)).padStart(3, '0')}%`;
-      if (value >= 100) status.textContent = 'Entering orbit';
+      if (value >= 100) status.textContent = 'Entering the festival';
 
       if (value >= 99.9 && ready) {
         setTimeout(() => loader.classList.add('is-leaving'), 140);
@@ -308,16 +317,16 @@
       button.addEventListener('click', () => setTheme(button.dataset.setTheme));
     });
 
-    paletteList.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-palette-id]');
+    seasonList.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-season-id]');
       if (!button) return;
-      Store.setPref('palette', button.dataset.paletteId);
-      applyPalette(button.dataset.paletteId);
+      Store.setPref('season', button.dataset.seasonId);
+      applySeason(button.dataset.seasonId);
     });
 
     document.getElementById('resetControls').addEventListener('click', () => {
-      Store.setPref('palette', DEFAULT_PALETTE.id);
-      applyPalette(DEFAULT_PALETTE.id);
+      Store.clearPref('season');
+      applySeason(seasonForToday());
     });
   };
 
@@ -326,11 +335,11 @@
   const boot = () => {
     Catalogue.init();
     Registration.init();
-    renderPalettes();
+    renderSeasons();
     wireLinks();
     wireControls();
     applyTheme(root.dataset.theme);
-    const activePalette = applyPalette(root.dataset.palette);
+    applySeason(root.dataset.season);
 
     measureSections();
     updateScroll();
@@ -343,7 +352,7 @@
     Events.tick();
     setInterval(Events.tick, 1000);
 
-    // Modals cover the field, so don't render behind them. Controls stay live to preview palettes.
+    // Modals cover the field, so don't render behind them. The seasons panel stays live to preview.
     Sheets.onChange(() => {
       const sheet = Sheets.active();
       control.paused = Boolean(sheet) && sheet.id !== 'controlsSheet';
@@ -354,20 +363,22 @@
     // A slow CDN must never hold the page hostage: reveal anyway, and the field joins when it arrives.
     setTimeout(markReady, 7000);
 
-    GravityScene.start({
+    FieldScene.start({
       container: document.getElementById('field'),
       canvas: document.getElementById('fieldCanvas'),
       control,
       mouse,
-      ballColor: activePalette.ball,
+      season: root.dataset.season,
+      theme: root.dataset.theme,
       reducedMotion,
       onReady: markReady,
     }).then((instance) => {
       scene = instance;
-      scene.setBallColor(PALETTES.find((item) => item.id === root.dataset.palette).ball);
+      scene.setSeason(root.dataset.season);
+      scene.setTheme(root.dataset.theme);
     }).catch((error) => {
-      // Without WebGL the site still works; only the sphere field is missing.
-      console.warn('Sphere field unavailable:', error);
+      // Without WebGL the site still works; only the field is missing.
+      console.warn('Field unavailable:', error);
       document.getElementById('field').hidden = true;
       markReady();
     });

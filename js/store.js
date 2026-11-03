@@ -2,9 +2,9 @@
    site data can make it throw, and the page has to keep working regardless. */
 const Store = (() => {
   const KEYS = {
-    registrations: 'gravity.registrations.v1',
-    theme: 'gravity.theme',
-    palette: 'gravity.palette',
+    registrations: 'matsuri.registrations.v1',
+    theme: 'matsuri.theme',
+    season: 'matsuri.season',
   };
 
   const read = (key, fallback) => {
@@ -29,7 +29,7 @@ const Store = (() => {
 
   const makeRef = () => {
     const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let ref = 'GRV-';
+    let ref = 'MTR-';
     for (let i = 0; i < 6; i++) ref += alphabet[Math.floor(Math.random() * alphabet.length)];
     return ref;
   };
@@ -55,5 +55,12 @@ const Store = (() => {
       registrations.some((r) => r.slug === slug && r.email.toLowerCase() === email.toLowerCase()),
 
     setPref: (name, value) => write(KEYS[name], value),
+    clearPref: (name) => {
+      try {
+        localStorage.removeItem(KEYS[name]);
+      } catch {
+        /* Nothing to clear if storage is blocked. */
+      }
+    },
   };
 })();

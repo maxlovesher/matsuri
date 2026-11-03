@@ -14,15 +14,14 @@ const Catalogue = (() => {
 
   const featureCard = (event) => `
     <article class="feature-card">
-      <div class="feature-card__art">${Poster.svg(event)}</div>
+      ${Poster.print(event)}
       <div class="feature-card__body">
         <div class="feature-card__top">
-          <span>${esc(event.category)}</span>
-          <span data-countdown="${event.slug}" aria-hidden="true">${Events.countdownText(event)}</span>
-          <span class="feature-card__dot"></span>
+          <span>${esc(event.category)} · ${esc(event.city)}</span>
+          <span class="feature-card__count" data-countdown="${event.slug}" aria-hidden="true">${Events.countdownText(event)}</span>
         </div>
         <h3><a class="stretched" href="#event/${event.slug}">${esc(event.name)}</a></h3>
-        <p>${esc(Events.formatDate(event))} · ${esc(event.venue)}, ${esc(event.city)}</p>
+        <p>${esc(Events.formatDate(event))} · ${esc(event.venue)}</p>
         <p>${esc(event.short)}</p>
       </div>
     </article>`;
@@ -32,16 +31,16 @@ const Catalogue = (() => {
     return `
     <article class="event-card${Events.status(event) === 'open' ? '' : ' is-muted'}" style="--i:${Math.min(index, 8)}">
       <div class="event-card__art">
-        ${Poster.svg(event)}
-        <span class="tag tag--left">${esc(event.category)}</span>
-        <span class="tag tag--right" data-countdown="${event.slug}" aria-hidden="true">${Events.countdownText(event)}</span>
+        ${Poster.print(event)}
+        <span class="event-card__count" data-countdown="${event.slug}" aria-hidden="true">${Events.countdownText(event)}</span>
       </div>
       <div class="event-card__body">
+        <div class="date-block" aria-hidden="true">
+          <b>${Events.dayOfMonth(event)}</b>
+          <span lang="ja">${Events.monthKanji(event)}</span>
+        </div>
         <h3><a class="stretched" href="#event/${event.slug}">${esc(event.name)}</a></h3>
-        <ul class="meta">
-          <li>${icon('calendar')}<span>${esc(Events.formatDate(event))}</span></li>
-          <li>${icon('pin')}<span>${esc(event.venue)}, ${esc(event.city)}</span></li>
-        </ul>
+        <p class="venue">${icon('pin')}<span>${esc(event.venue)}, ${esc(event.city)}<span class="visually-hidden">, ${esc(Events.formatDate(event))}</span></span></p>
         <p class="event-card__desc">${esc(event.short)}</p>
         <div class="event-card__foot">
           <span class="event-card__price">${Events.formatPrice(event)}</span>
@@ -67,8 +66,9 @@ const Catalogue = (() => {
   };
 
   const renderChips = () => {
-    chips.innerHTML = ['All', ...Events.CATEGORIES].map((category) => `
-      <button class="chip" type="button" data-chip="${category}" aria-pressed="${state.category === category}">${category}</button>
+    const all = `<button class="chip" type="button" data-chip="All" aria-pressed="${state.category === 'All'}">All</button>`;
+    chips.innerHTML = all + Events.CATEGORIES.map(({ name, kanji }) => `
+      <button class="chip" type="button" data-chip="${name}" aria-pressed="${state.category === name}"><b lang="ja" aria-hidden="true">${kanji}</b>${name}</button>
     `).join('');
   };
 
@@ -87,12 +87,12 @@ const Catalogue = (() => {
   const renderStatic = () => {
     featuredList.innerHTML = Events.featured().map(featureCard).join('');
 
-    document.getElementById('categoryLinks').innerHTML = Events.CATEGORIES.map((category) => `
-      <li><button type="button" data-category="${category}">${category} <small>${Events.inCategory(category).length}</small></button></li>
+    document.getElementById('categoryLinks').innerHTML = Events.CATEGORIES.map(({ name, kanji }) => `
+      <li><button type="button" data-category="${name}"><b lang="ja" aria-hidden="true">${kanji}</b>${name} <small>${Events.inCategory(name).length} events</small></button></li>
     `).join('');
 
-    document.getElementById('footerCategories').innerHTML = Events.CATEGORIES.slice(0, 4).map((category) => `
-      <li><button type="button" data-category="${category}">${category}</button></li>
+    document.getElementById('footerCategories').innerHTML = Events.CATEGORIES.slice(0, 4).map(({ name }) => `
+      <li><button type="button" data-category="${name}">${name}</button></li>
     `).join('');
 
     const next = Events.next();

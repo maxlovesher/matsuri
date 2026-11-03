@@ -11,7 +11,7 @@ const Registration = (() => {
   const ROUTE_REGISTER = '#register';
 
   const closeButton = (extraClass = '') => `
-    <button class="round-btn ${extraClass}" type="button" data-sheet-close aria-label="Close">${icon('x')}</button>`;
+    <button class="square-btn ${extraClass}" type="button" data-sheet-close aria-label="Close">${icon('x')}</button>`;
 
   const setContent = (html, label) => {
     body.innerHTML = html;
@@ -32,18 +32,20 @@ const Registration = (() => {
     }[state];
 
     setContent(`
-      <div class="detail__art">
-        ${Poster.svg(event)}
-        ${closeButton('detail__close')}
+      ${closeButton('detail__close')}
+      <div class="detail__head">
+        ${Poster.print(event)}
+        <div class="detail__intro">
+          <p class="detail__kicker"><span class="seal" lang="ja" aria-hidden="true">${Events.categoryKanji(event.category)}</span>${esc(event.category)} · ${esc(event.city)}</p>
+          <h2 class="detail__title">${esc(event.name)}</h2>
+        </div>
       </div>
       <div class="detail__body">
-        <p class="detail__kicker">${esc(event.category)}</p>
-        <h2 class="detail__title">${esc(event.name)}</h2>
         <ul class="detail__facts">
-          <li>${icon('calendar')}<span><strong>${esc(Events.formatDate(event))}</strong>${esc(Events.formatTime(event))}</span></li>
+          <li>${icon('clock')}<span><strong>${esc(Events.formatDate(event))}</strong>${esc(Events.formatTime(event))}</span></li>
           <li>${icon('pin')}<span><strong>${esc(event.venue)}</strong>${esc(event.city)}</span></li>
           <li>${icon('users')}<span><strong>Hosted by</strong>${esc(event.host)}</span></li>
-          <li>${icon('ticket')}<span><strong>${Events.formatPrice(event)}</strong>${event.price === 0 ? 'No ticket fee' : 'Per person'}</span></li>
+          <li>${icon('yen')}<span><strong>${Events.formatPrice(event)}</strong>${event.price === 0 ? 'No ticket fee' : 'Per person'}</span></li>
         </ul>
 
         <div class="countdown" data-countdown="${event.slug}" data-style="segments" aria-hidden="true">
@@ -125,7 +127,7 @@ const Registration = (() => {
       <div class="form-view">
         <div class="form-view__nav">
           ${event
-            ? `<button class="round-btn" type="button" data-to-detail="${event.slug}" aria-label="Back to event details">${icon('arrow-left')}</button>`
+            ? `<button class="square-btn" type="button" data-to-detail="${event.slug}" aria-label="Back to event details">${icon('arrow-left')}</button>`
             : '<span></span>'}
           ${closeButton()}
         </div>
@@ -135,7 +137,7 @@ const Registration = (() => {
         <form class="reg-form" id="regForm" novalidate>
           ${field('name', 'Full name', 'text', 'name', 'Your full name')}
           ${field('email', 'Email address', 'email', 'email', 'name@example.com')}
-          ${field('phone', 'Phone number', 'tel', 'tel', '+91 98765 43210')}
+          ${field('phone', 'Phone number', 'tel', 'tel', '+81 90 1234 5678')}
           <div class="field-group">
             <label for="reg-event">Event</label>
             <select id="reg-event" name="event" aria-describedby="reg-event-error">
@@ -215,16 +217,13 @@ const Registration = (() => {
     const firstName = entry.name.split(' ')[0];
     setContent(`
       <div class="success" role="status">
-        <div class="success__mark">${icon('check')}</div>
+        <div class="success__stamp" lang="ja" aria-hidden="true">予約<br>済</div>
         <h2 tabindex="-1" id="successHeading">You're in, ${esc(firstName)}.</h2>
-        <p>Your seat is confirmed. Keep your reference handy for the door, and we've noted ${esc(entry.email)} as your contact.</p>
+        <p>Your seat is confirmed. Keep your reference handy for the gate, and we've noted ${esc(entry.email)} as your contact.</p>
         <div class="success__ticket">
           <span class="ticket__ref">${esc(entry.ref)}</span>
           <strong>${esc(event.name)}</strong>
-          <ul class="meta">
-            <li>${icon('calendar')}<span>${esc(Events.formatDate(event))}, ${esc(Events.formatTime(event))}</span></li>
-            <li>${icon('pin')}<span>${esc(event.venue)}, ${esc(event.city)}</span></li>
-          </ul>
+          <p>${esc(Events.formatDate(event))}, ${esc(Events.formatTime(event))}<br>${esc(event.venue)}, ${esc(event.city)}</p>
         </div>
         <div class="success__actions">
           <a class="btn btn--primary" href="#my-registrations">View my registrations</a>
@@ -253,14 +252,13 @@ const Registration = (() => {
 
     ticketList.innerHTML = tickets.map(({ entry, event }) => `
       <article class="ticket">
+        <span class="seal ticket__stamp" lang="ja" aria-hidden="true">予約<br>済</span>
         <div>
           <span class="ticket__ref">${esc(entry.ref)}</span>
           <h3><a href="#event/${event.slug}">${esc(event.name)}</a></h3>
           <p class="ticket__who">${esc(entry.name)} · ${esc(entry.email)}</p>
-          <ul class="meta">
-            <li>${icon('calendar')}<span>${esc(Events.formatDate(event))}</span></li>
-            <li>${icon('pin')}<span>${esc(event.venue)}, ${esc(event.city)}</span></li>
-          </ul>
+          <p class="venue">${icon('clock')}<span>${esc(Events.formatDate(event))}</span></p>
+          <p class="venue">${icon('pin')}<span>${esc(event.venue)}, ${esc(event.city)}</span></p>
         </div>
         <div class="ticket__side">
           <span class="ticket__count" data-countdown="${event.slug}" aria-hidden="true">${Events.countdownText(event)}</span>

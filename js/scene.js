@@ -1,6 +1,6 @@
-/* The full-screen gravity field: glossy spheres driven by scroll progress.
-   Scroll progress is a float "section index": 0 hero, 1 drop, 2 heart, 3 release. */
-const GravityScene = (() => {
+/* The full-screen field: embroidered temari and glowing paper lanterns driven by scroll.
+   Scroll progress is a float "section index": 0 hero, 1 fall, 2 torii gate, 3 passing through. */
+const FieldScene = (() => {
   const THREE_URL = 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
   const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -9,7 +9,6 @@ const GravityScene = (() => {
   const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
   const STEP = 1 / 60;
-  const ROLES = ['pastel', 'light', 'medium', 'deep', 'glass'];
   const PARAMS = {
     rebound: -0.3,
     mouseRepelForce: 0.05,
@@ -18,8 +17,44 @@ const GravityScene = (() => {
     bounciness: 0.02,
   };
 
-  async function start({ container, canvas, control, mouse, ballColor, reducedMotion, onReady }) {
+  /* Each thread colourway is [ball colour, thread colour]. */
+  const SEASONS = {
+    spring: {
+      petal: '#f4b6c6',
+      threads: [['#f2b6c6', '#fff6f2'], ['#d9577f', '#ffe9ef'], ['#f8efe4', '#e0708f'], ['#8aa86a', '#f8efe4']],
+    },
+    summer: {
+      petal: '#a9c7e0',
+      threads: [['#1f3a6e', '#f3eee3'], ['#3f6fb0', '#f3eee3'], ['#f3eee3', '#1f3a6e'], ['#c8321f', '#f3e3b0']],
+    },
+    autumn: {
+      petal: '#d9531e',
+      threads: [['#b92c1a', '#e8c15f'], ['#e0702a', '#fbe7c6'], ['#d9a441', '#6b2a14'], ['#4d1f2e', '#e8a86c']],
+    },
+    winter: {
+      petal: '#ffffff',
+      threads: [['#eef1f4', '#2f4a6b'], ['#a9c4dc', '#ffffff'], ['#25395a', '#dfe8f2'], ['#2a2a2e', '#c9a24b']],
+    },
+  };
+  /* Festival colours the temari take on as they fall, whatever the season. */
+  const FESTIVAL = [['#c8321f', '#e8c15f'], ['#1f3a6e', '#f3eee3'], ['#d9a441', '#8a2413'], ['#f3eee3', '#c8321f']];
+  const THREAD_WEIGHTS = [0.32, 0.28, 0.24, 0.16];
+
+  const GATE_RED = '#cf3a20';
+  const GATE_INK = '#2a2526';
+  const LANTERN_KANJI = ['祭', '灯', '縁', '夢'];
+  const LANTERN_SHARE = 0.24;
+
+  async function start({ container, canvas, control, mouse, season, theme, reducedMotion, onReady }) {
     const THREE = await import(THREE_URL);
+
+    // Lantern characters are drawn to canvas, so their font has to be ready first.
+    if (document.fonts) {
+      await Promise.race([
+        document.fonts.load('700 200px "Shippori Mincho"', LANTERN_KANJI.join('')),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]).catch(() => {});
+    }
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, container.clientWidth / container.clientHeight, 0.1, 100);
@@ -30,15 +65,15 @@ const GravityScene = (() => {
     let pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2);
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(container.clientWidth, container.clientHeight, false);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    // No filmic tone mapping: the flat, saturated colour of a woodblock print is the goal.
+    renderer.toneMapping = THREE.NoToneMapping;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, new THREE.Color(ballColor), 1.6);
+    const hemiLight = new THREE.HemisphereLight(0xfff6e8, 0x8a6a58, 1.5);
     scene.add(hemiLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    const keyLight = new THREE.DirectionalLight(0xfff1dc, 1.7);
     keyLight.position.set(-6, 10, 8);
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.set(isMobile ? 1024 : 2048, isMobile ? 1024 : 2048);
@@ -49,20 +84,16 @@ const GravityScene = (() => {
     keyLight.shadow.camera.top = 8;
     keyLight.shadow.camera.bottom = -8;
     keyLight.shadow.bias = -0.0003;
-    keyLight.shadow.radius = 12.0;
+    keyLight.shadow.radius = 10;
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0xffffff, 1.25);
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.7);
     rimLight.position.set(8, 7, -8);
     scene.add(rimLight);
 
-    const frontLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    const frontLight = new THREE.DirectionalLight(0xffffff, 0.35);
     frontLight.position.set(0, 0, 11);
     scene.add(frontLight);
-
-    const sideBounceLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    sideBounceLight.position.set(-9, -2, 4);
-    scene.add(sideBounceLight);
 
     // The simulation box is the visible frustum at z = 0.
     let viewportWidth = 10;
@@ -74,33 +105,56 @@ const GravityScene = (() => {
     };
     updateFrustumBounds();
 
-    const getDynamicColors = (baseColor) => {
-      const hex = baseColor.toLowerCase();
-      const set = (pastel, light, medium, deep, glass) => ({
-        pastel: new THREE.Color(pastel),
-        light: new THREE.Color(light),
-        medium: new THREE.Color(medium),
-        deep: new THREE.Color(deep),
-        glass: new THREE.Color(glass),
-      });
-      if (hex === '#e1fc03') return set('#FBFFE2', '#EFFE69', '#E1FC03', '#B1E200', '#DCFF32');
-      if (hex === '#ffc5c2') return set('#FFF5F4', '#FFECEB', '#FFA6B3', '#FF4D6D', '#FFA6B3');
-      if (hex === '#96e5ff') return set('#F0F9FF', '#C9F1FF', '#96E5FF', '#2BA5FF', '#98E4FF');
-      return set('#ECEFFF', '#A8C1FF', '#2F69FF', '#0A33BF', '#4D80FF');
+    const toThreads = (list) => list.map(([ball, thread]) => ({ ball: new THREE.Color(ball), thread: new THREE.Color(thread) }));
+    let seasonThreads = toThreads(SEASONS[season].threads);
+    let petalColor = new THREE.Color(SEASONS[season].petal);
+    const festivalThreads = toThreads(FESTIVAL);
+    const currentThreads = THREAD_WEIGHTS.map(() => ({ ball: new THREE.Color(), thread: new THREE.Color() }));
+
+    /* --- Textures --- */
+
+    const textureSize = isMobile ? 256 : 512;
+    const anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+    const toTexture = (source) => {
+      const texture = new THREE.CanvasTexture(source);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.anisotropy = anisotropy;
+      return texture;
+    };
+    const temariTextures = Array.from({ length: Patterns.temariCount }, (_, i) => toTexture(Patterns.temari(i, textureSize)));
+    const lanternTextures = LANTERN_KANJI.map((kanji) => toTexture(Patterns.lantern(kanji, textureSize)));
+    const glowTexture = new THREE.CanvasTexture(Patterns.glow());
+
+    /* Mixes ball and thread colour by the mask, so both can morph while staying properly lit.
+       Ink on a lantern also blocks its inner glow. */
+    const threadShader = (threadColor) => (shader) => {
+      shader.uniforms.threadColor = { value: threadColor };
+      shader.fragmentShader = `uniform vec3 threadColor;\n${shader.fragmentShader}`.replace(
+        '#include <map_fragment>',
+        `float threadMask = texture2D(map, vMapUv).r;
+         diffuseColor.rgb = mix(diffuseColor.rgb, threadColor, threadMask);
+         totalEmissiveRadiance *= 1.0 - threadMask;`
+      );
     };
 
-    // Scroll-driven palettes: hero (base) -> volt-lime (drop) -> rose-pink (heart).
-    let palHero = getDynamicColors(ballColor);
-    const palLime = getDynamicColors('#E1FC03');
-    const palPink = getDynamicColors('#FFC5C2');
-    const curPal = {};
-    ROLES.forEach((role) => { curPal[role] = new THREE.Color(); });
+    const pickThread = () => {
+      let roll = Math.random();
+      for (let i = 0; i < THREAD_WEIGHTS.length; i++) {
+        roll -= THREAD_WEIGHTS[i];
+        if (roll <= 0) return i;
+      }
+      return 0;
+    };
+
+    /* --- Spheres --- */
 
     // Phones have a much narrower box, so spheres shrink to keep the copy readable.
     const ballCount = isMobile ? 54 : 96;
     const sizeScale = isMobile ? 0.72 : 1;
-    const sphereGeometry = new THREE.SphereGeometry(1, 48, 48);
+    const sphereGeometry = new THREE.SphereGeometry(1, 40, 28);
     const balls = [];
+    const inkColor = new THREE.Color('#1b1a18');
+    const lanternPapers = [new THREE.Color('#d8452a'), new THREE.Color('#f4e7cc')];
 
     for (let i = 0; i < ballCount; i++) {
       const rand = Math.random();
@@ -110,40 +164,45 @@ const GravityScene = (() => {
       else radius = 0.66 + Math.random() * 0.21;
       radius *= sizeScale;
 
-      const isGlass = Math.random() < 0.22;
-      let role = 'glass';
-      let material;
+      const isLantern = i < Math.round(ballCount * LANTERN_SHARE);
+      const threadIndex = pickThread();
+      const threadColor = new THREE.Color();
+      const paper = lanternPapers[i % lanternPapers.length];
 
-      if (isGlass) {
-        material = new THREE.MeshPhysicalMaterial({
-          color: palHero.glass, roughness: 0.08, metalness: 0.0,
-          clearcoat: 1.0, clearcoatRoughness: 0.03, transmission: 0.95,
-          ior: 1.485, thickness: 2.2,
-          specularColor: new THREE.Color('#ffffff'), specularIntensity: 1.0,
-          attenuationColor: palHero.pastel.clone(), attenuationDistance: 1.0,
-          emissive: palHero.glass, emissiveIntensity: 0.12,
-          transparent: true,
-        });
-      } else {
-        const colorRand = Math.random();
-        if (colorRand < 0.25) role = 'pastel';
-        else if (colorRand < 0.55) role = 'light';
-        else if (colorRand < 0.85) role = 'medium';
-        else role = 'deep';
+      const map = isLantern
+        ? lanternTextures[i % lanternTextures.length]
+        : temariTextures[i % temariTextures.length];
 
-        material = new THREE.MeshPhysicalMaterial({
-          color: palHero[role], roughness: 0.44, metalness: 0.0,
-          clearcoat: 0.24, clearcoatRoughness: 0.35,
-          emissive: palHero[role], emissiveIntensity: 0.08,
-          transparent: true,
-        });
-      }
+      const material = new THREE.MeshStandardMaterial({
+        map,
+        bumpMap: map,
+        bumpScale: isLantern ? 0.4 : 1.4,
+        roughness: isLantern ? 0.62 : 0.78,
+        metalness: 0,
+        emissive: isLantern ? new THREE.Color('#ff9a4a') : new THREE.Color('#000000'),
+        transparent: true,
+      });
+      material.onBeforeCompile = threadShader(threadColor);
 
       const mesh = new THREE.Mesh(sphereGeometry, material);
-      mesh.scale.setScalar(radius);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      if (isLantern) mesh.rotation.y = (Math.random() - 0.5) * 1.1;
+      else mesh.quaternion.setFromEuler(new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6));
       scene.add(mesh);
+
+      let halo = null;
+      if (isLantern) {
+        halo = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: glowTexture,
+          color: 0xffa050,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          transparent: true,
+        }));
+        halo.scale.setScalar(3.4);
+        mesh.add(halo);
+      }
 
       balls.push({
         id: i,
@@ -153,49 +212,140 @@ const GravityScene = (() => {
         velocity: new THREE.Vector3(),
         mesh,
         material,
-        role,
-        isGlass,
+        halo,
+        isLantern,
+        threadIndex,
+        threadColor,
+        paper,
+        inkOnly: false,
         visualScale: radius,
-        shapeTarget: new THREE.Vector3(),
+        gateTarget: new THREE.Vector3(),
+        gateRadius: radius,
+        gateColor: new THREE.Color(GATE_RED),
       });
     }
 
-    const meanRadius = balls.reduce((sum, b) => sum + b.radius, 0) / balls.length;
-    let shapeScale = 1;
+    /* --- Torii gate --- */
 
-    // Fill the heart implicit (x²+y²−1)³ − x²y³ ≤ 0 by rejection sampling.
-    const inHeart = (x, y) => {
-      const a = x * x + y * y - 1;
-      return a * a * a - x * x * y * y * y <= 0;
-    };
-    const assignHeartTargets = () => {
-      // Wide screens keep the copy in the left column, so the heart sits to the right of it.
+    const gate = { cx: 0, cy: 0 };
+
+    /* Lays the balls out along the beams and pillars of a torii, shoulder to shoulder. */
+    const assignGateTargets = () => {
       const isSideBySide = window.innerWidth >= 1024;
       const isPortrait = viewportWidth < viewportHeight;
-      const S = isPortrait ? viewportWidth * 0.24 : Math.min(viewportWidth * (isSideBySide ? 0.18 : 0.30), viewportHeight * 0.27);
-      const baseCX = isSideBySide ? viewportWidth * 0.25 : 0;
-      const baseCY = -viewportHeight * 0.03;
-      shapeScale = Math.max(0.3, Math.min(1, (S * 0.45 / 2.3) / meanRadius));
-      balls.forEach((ball, i) => {
-        let x = 0;
-        let y = 0;
-        if (i % 2 === 0) {
-          // Half trace the outline, evenly spaced: a random fill alone reads as a blob.
-          const t = (i / balls.length) * Math.PI * 2;
-          x = (16 * Math.pow(Math.sin(t), 3)) / 16;
-          y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 14.2 + 0.17;
-        } else {
-          let tries = 0;
-          do {
-            x = (Math.random() * 2 - 1) * 1.25;
-            y = Math.random() * 2.55 - 1.4;
-            tries++;
-          } while (!inHeart(x, y) && tries < 60);
+      const H = isPortrait ? viewportWidth * 0.56 : Math.min(viewportHeight * 0.64, viewportWidth * 0.36);
+      const W = H * 1.08;
+      gate.cx = isSideBySide ? viewportWidth * 0.25 : 0;
+      gate.cy = -viewportHeight * 0.03;
+
+      const at = (x, y) => [gate.cx + x * W, gate.cy + (y - 0.5) * H];
+      const parts = [
+        // Kasagi: the ink top beam, sweeping up at both ends
+        { ink: true, length: 1.3 * W, point: (t) => { const x = lerp(-0.65, 0.65, t); return at(x, 1.0 + 0.09 * Math.pow(x / 0.65, 2)); } },
+        // Shimaki: the red beam just beneath it
+        { length: 1.12 * W, point: (t) => at(lerp(-0.56, 0.56, t), 0.925) },
+        // Nuki: the lower tie beam
+        { length: 0.98 * W, point: (t) => at(lerp(-0.49, 0.49, t), 0.72) },
+        // Gakuzuka: the short post between them
+        { length: 0.14 * H, point: (t) => at(0, lerp(0.76, 0.89, t)) },
+        // Hashira: the two pillars, leaning slightly inward
+        { length: 0.9 * H, point: (t) => at(lerp(-0.4, -0.34, t), lerp(0, 0.9, t)) },
+        { length: 0.9 * H, point: (t) => at(lerp(0.4, 0.34, t), lerp(0, 0.9, t)) },
+      ];
+
+      // One lantern hangs in the opening; everything else builds the structure.
+      const beads = balls.slice(1);
+      for (let i = beads.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [beads[i], beads[j]] = [beads[j], beads[i]];
+      }
+      const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
+      const spacing = totalLength / beads.length;
+
+      let cursor = 0;
+      parts.forEach((part, partIndex) => {
+        const isLast = partIndex === parts.length - 1;
+        const count = isLast ? beads.length - cursor : Math.max(2, Math.round(part.length / spacing));
+        for (let i = 0; i < count && cursor < beads.length; i++, cursor++) {
+          const [x, y] = part.point(count === 1 ? 0.5 : i / (count - 1));
+          const bead = beads[cursor];
+          bead.gateTarget.set(x, y, (Math.random() - 0.5) * 0.18);
+          bead.gateRadius = spacing * 0.66 * (0.94 + Math.random() * 0.12);
+          bead.gateColor.set(part.ink ? GATE_INK : GATE_RED);
         }
-        ball.shapeTarget.set(x * S + baseCX, (y + 0.12) * S + baseCY, (Math.random() - 0.5) * 0.35);
       });
+
+      const hanging = balls[0];
+      const [hangX, hangY] = at(0, 0.5);
+      hanging.gateTarget.set(hangX, hangY, 0.3);
+      hanging.gateRadius = H * 0.1;
+      hanging.gateColor.copy(hanging.paper);
     };
-    assignHeartTargets();
+    assignGateTargets();
+
+    /* --- Drifting petals --- */
+
+    const petalCount = reducedMotion ? 0 : isMobile ? 30 : 70;
+    const petalShape = new THREE.Shape();
+    petalShape.moveTo(0, -0.1);
+    petalShape.bezierCurveTo(0.09, -0.04, 0.09, 0.06, 0.018, 0.1);
+    petalShape.lineTo(0, 0.08);
+    petalShape.lineTo(-0.018, 0.1);
+    petalShape.bezierCurveTo(-0.09, 0.06, -0.09, -0.04, 0, -0.1);
+    const petalMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, opacity: 0.92, toneMapped: false });
+    const petalMesh = new THREE.InstancedMesh(new THREE.ShapeGeometry(petalShape), petalMaterial, Math.max(1, petalCount));
+    petalMesh.visible = petalCount > 0;
+    petalMesh.frustumCulled = false;
+    scene.add(petalMesh);
+
+    const petalDummy = new THREE.Object3D();
+    const shadeColor = new THREE.Color();
+    const petals = Array.from({ length: petalCount }, (_, i) => {
+      shadeColor.setScalar(0.82 + Math.random() * 0.18);
+      petalMesh.setColorAt(i, shadeColor);
+      return {
+        x: (Math.random() - 0.5) * viewportWidth,
+        y: (Math.random() - 0.5) * viewportHeight,
+        z: Math.random() * 3 - 0.5,
+        fall: 0.25 + Math.random() * 0.4,
+        sway: 0.3 + Math.random() * 0.5,
+        phase: Math.random() * 6.28,
+        spin: 0.4 + Math.random() * 1.4,
+        scale: 0.55 + Math.random() * 0.6,
+      };
+    });
+
+    const updatePetals = (dt, time) => {
+      const halfW = viewportWidth / 2 + 1;
+      const halfH = viewportHeight / 2 + 0.6;
+      petals.forEach((p, i) => {
+        p.y -= p.fall * dt;
+        p.x += (0.12 + Math.sin(time * p.sway + p.phase) * 0.28) * dt;
+        if (p.y < -halfH) { p.y = halfH; p.x = (Math.random() - 0.5) * viewportWidth; }
+        if (p.x > halfW) p.x = -halfW;
+        petalDummy.position.set(p.x, p.y, p.z);
+        petalDummy.rotation.set(time * p.spin + p.phase, Math.sin(time * p.sway + p.phase) * 1.2, time * p.spin * 0.6);
+        petalDummy.scale.setScalar(p.scale);
+        petalDummy.updateMatrix();
+        petalMesh.setMatrixAt(i, petalDummy.matrix);
+      });
+      petalMesh.instanceMatrix.needsUpdate = true;
+    };
+
+    /* --- Theme --- */
+
+    let lanternGlow = 0.4;
+    let haloStrength = 0;
+    const applyTheme = (name) => {
+      const isNight = name === 'dark';
+      lanternGlow = isNight ? 1.0 : 0.38;
+      haloStrength = isNight ? 0.5 : 0.08;
+      hemiLight.intensity = isNight ? 0.95 : 1.5;
+      keyLight.intensity = isNight ? 1.25 : 1.7;
+    };
+    applyTheme(theme);
+
+    /* --- Positions --- */
 
     const scatterFar = (withInwardVelocity) => {
       const R = Math.max(viewportWidth, viewportHeight) * 1.5;
@@ -221,10 +371,10 @@ const GravityScene = (() => {
           (Math.random() - 0.5) * 2
         );
         b.mesh.position.copy(b.position);
+        b.mesh.scale.setScalar(b.radius);
         b.velocity.set(0, 0, 0);
       }
     };
-    scatterFar(false);
 
     const mouseProjVec = new THREE.Vector3();
     const mouseWorld3D = new THREE.Vector3();
@@ -239,7 +389,12 @@ const GravityScene = (() => {
     const diffVec = new THREE.Vector3();
     const collideDiff = new THREE.Vector3();
     const relVel = new THREE.Vector3();
+    const deltaPos = new THREE.Vector3();
+    const rotAxis = new THREE.Vector3();
     const prevMouseWorld = new THREE.Vector3();
+    const mixColor = new THREE.Color();
+    const petalMix = new THREE.Color();
+    const gateRedColor = new THREE.Color(GATE_RED);
     let wasInteracting = false;
     let mouseSpeed = 0;
     let localStarted = false;
@@ -252,13 +407,16 @@ const GravityScene = (() => {
       const flyF = smoothstep(2.4, 3.05, progress);
       const shapeF = smoothstep(1.40, 2.05, progress) * (1 - smoothstep(2.3, 2.75, progress));
       const dropF = dropRaw * (1 - smoothstep(1.25, 1.75, progress));
+      // The gate slides to centre and grows as you scroll, as though you are walking up to it.
+      const approach = smoothstep(2.05, 2.6, progress);
+      const gateScale = 1 + 1.7 * approach;
+      const gateX = gate.cx * (1 - approach);
 
-      const bLime = smoothstep(0.55, 1.05, progress);
-      const bPink = smoothstep(1.40, 1.95, progress);
-      for (const role of ROLES) {
-        curPal[role].copy(palHero[role]).lerp(palLime[role], bLime).lerp(palPink[role], bPink);
-      }
-      hemiLight.groundColor.copy(curPal.medium);
+      const bFestival = smoothstep(0.55, 1.05, progress);
+      currentThreads.forEach((current, i) => {
+        current.ball.copy(seasonThreads[i].ball).lerp(festivalThreads[i].ball, bFestival);
+        current.thread.copy(seasonThreads[i].thread).lerp(festivalThreads[i].thread, bFestival);
+      });
 
       const entranceT = reducedMotion ? 1 : easeOutCubic(clamp01((time - entranceStart) / 2.2));
       const attractionBoost = lerp(7.5, 1, entranceT);
@@ -300,9 +458,12 @@ const GravityScene = (() => {
 
         if (shapeF > 0.001) {
           const k = 0.06 * shapeF;
-          b.velocity.x += (b.shapeTarget.x - b.position.x) * k;
-          b.velocity.y += (b.shapeTarget.y - b.position.y) * k;
-          b.velocity.z += (b.shapeTarget.z - b.position.z) * k;
+          const targetX = (b.gateTarget.x - gate.cx) * gateScale + gateX;
+          const targetY = (b.gateTarget.y - gate.cy) * gateScale + gate.cy;
+          const targetZ = b.gateTarget.z + 1.7 * approach;
+          b.velocity.x += (targetX - b.position.x) * k;
+          b.velocity.y += (targetY - b.position.y) * k;
+          b.velocity.z += (targetZ - b.position.z) * k;
         }
 
         if (flyF > 0.001) {
@@ -340,22 +501,30 @@ const GravityScene = (() => {
           if (b.position.z > 40) { b.position.z = 40; b.velocity.z = 0; }
         }
 
-        const c = b.isGlass ? curPal.glass : curPal[b.role];
-        b.material.color.copy(c);
-        b.material.emissive.copy(c);
-        if (b.isGlass) b.material.attenuationColor.copy(curPal.pastel);
+        // Colour: thread colourways morph with scroll, then everything takes on the gate's colours.
+        const threads = currentThreads[b.threadIndex];
+        mixColor.copy(b.isLantern ? b.paper : threads.ball).lerp(b.gateColor, shapeF);
+        b.material.color.copy(mixColor);
+        if (b.isLantern) b.threadColor.copy(inkColor).lerp(b.gateColor, shapeF * (b.id === 0 ? 0 : 1));
+        else b.threadColor.copy(threads.thread).lerp(b.gateColor, shapeF * 0.8);
 
-        b.material.opacity = flyF > 0.001
-          ? 1 - smoothstep(camZ - 2.6, camZ - 0.3, b.position.z)
-          : 1;
+        const opacity = flyF > 0.001 ? 1 - smoothstep(camZ - 2.6, camZ - 0.3, b.position.z) : 1;
+        b.material.opacity = opacity;
+        if (b.isLantern) {
+          const dim = b.id === 0 ? 1 : 1 - 0.8 * shapeF;
+          const flicker = 0.92 + Math.sin(time * 3.1 + b.id * 2.4) * 0.08;
+          b.material.emissiveIntensity = lanternGlow * dim * flicker;
+          b.halo.material.opacity = haloStrength * dim * opacity;
+        }
 
-        const targetVis = b.radius * (1 - (1 - shapeScale) * shapeF);
+        const targetVis = lerp(b.radius, b.gateRadius, shapeF);
         b.visualScale += (targetVis - b.visualScale) * 0.12;
-        b.mesh.scale.setScalar(b.visualScale);
+        if (b.isLantern) b.mesh.scale.set(b.visualScale, b.visualScale * 0.9, b.visualScale);
+        else b.mesh.scale.setScalar(b.visualScale);
       }
 
-      // 2. Pairwise collisions, nearly off in shape mode so balls snap onto the silhouette
-      const collideScale = 0.28 * (1 - 0.93 * shapeF) * (1 - flyF);
+      // 2. Pairwise collisions, nearly off in gate mode so balls can line up shoulder to shoulder
+      const collideScale = 0.28 * (1 - 0.97 * shapeF) * (1 - flyF);
       if (collideScale > 0.0005) {
         for (let step = 0; step < 4; step++) {
           for (let i = 0; i < balls.length; i++) {
@@ -387,13 +556,13 @@ const GravityScene = (() => {
         }
       }
 
-      // 3. Viewport walls and the bouncy floor
+      // 3. Viewport walls and the floor
       const xBound = viewportWidth / 2 - 0.2;
       const topY = viewportHeight / 2 - 0.05;
       const floorY = -viewportHeight / 2 + 0.05;
       const zBound = 2.0;
       const restitution = 0.30 + 0.35 * dropF;
-      const contain = flyF < 0.5;
+      const contain = flyF < 0.5 && approach < 0.05;
       const zContain = flyF < 0.02;
 
       for (const b of balls) {
@@ -419,8 +588,24 @@ const GravityScene = (() => {
           else if (b.position.z > zBound) { b.position.z = zBound; b.velocity.z *= PARAMS.rebound; }
         }
 
+        if (b.isLantern) {
+          // Lanterns stay upright and sway, so their characters remain readable.
+          b.mesh.rotation.z = Math.sin(time * 0.7 + b.id) * 0.08 * (1 - shapeF);
+        } else {
+          // Temari roll with their motion, which is what makes the embroidery come alive.
+          deltaPos.copy(b.position).sub(b.mesh.position);
+          const moved = Math.hypot(deltaPos.x, deltaPos.y);
+          if (moved > 0.0005) {
+            rotAxis.set(deltaPos.y, -deltaPos.x, 0).normalize();
+            b.mesh.rotateOnWorldAxis(rotAxis, -(moved / b.radius) * 0.95);
+          }
+        }
         b.mesh.position.copy(b.position);
       }
+
+      // Petals warm towards vermilion as the gate rises.
+      petalMix.copy(petalColor).lerp(gateRedColor, shapeF * 0.6);
+      petalMaterial.color.copy(petalMix);
     };
 
     // Steps down resolution, then shadows, if the device can't hold a usable frame rate.
@@ -457,6 +642,11 @@ const GravityScene = (() => {
     let parked = false;
     let flownSince = -1;
 
+    const setBallsVisible = (visible) => {
+      balls.forEach((b) => { b.mesh.visible = visible; });
+      renderer.shadowMap.autoUpdate = visible;
+    };
+
     const loop = () => {
       requestAnimationFrame(loop);
 
@@ -473,20 +663,26 @@ const GravityScene = (() => {
       }
       if (!localStarted || control.paused) return;
 
-      // Once every sphere has flown past the lens nothing is visible, so stop spending GPU on it.
+      updatePetals(dt, time);
+
+      // Once every sphere has flown past the lens, only the petals are left to draw.
       const progress = control.progress;
       if (progress >= 3.2) {
         if (flownSince < 0) flownSince = time;
         if (time - flownSince > 2.5) {
           if (!parked) {
             parked = true;
-            renderer.clear();
+            setBallsVisible(false);
           }
+          renderer.render(scene, camera);
           return;
         }
       } else {
         flownSince = -1;
-        parked = false;
+        if (parked) {
+          parked = false;
+          setBallsVisible(true);
+        }
       }
 
       updateMouse3D();
@@ -508,17 +704,19 @@ const GravityScene = (() => {
       camera.updateProjectionMatrix();
       renderer.setSize(container.clientWidth, container.clientHeight, false);
       updateFrustumBounds();
-      assignHeartTargets();
+      assignGateTargets();
     }).observe(container);
 
     loop();
 
     return {
-      setBallColor(hex) {
-        palHero = getDynamicColors(hex);
+      setSeason(name) {
+        seasonThreads = toThreads(SEASONS[name].threads);
+        petalColor = new THREE.Color(SEASONS[name].petal);
       },
+      setTheme: applyTheme,
     };
   }
 
-  return { start };
+  return { start, SEASONS };
 })();
